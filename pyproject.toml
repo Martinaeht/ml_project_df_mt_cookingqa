@@ -1,0 +1,32 @@
+[project]
+name = "project-applied-ml-cooking"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
+package-mode = false  # added
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas (>=2.2.3,<3.0.0)",
+    "numpy (>=2.2.4,<3.0.0)",
+    "transformers (>=4.51.3,<5.0.0)",
+    "torch (>=2.6.0,<3.0.0)",
+    "optuna (>=4.3.0,<5.0.0)",
+    "matplotlib (>=3.10.1,<4.0.0)",
+    "evaluate (>=0.4.3,<0.5.0)",
+    "seaborn (>=0.13.2,<0.14.0)",
+    "jsonlines (>=4.0.0,<5.0.0)",
+    "scikit-learn (>=1.6.1,<2.0.0)",
+    "datasets (>=3.5.1,<4.0.0)",
+    "evaluation (>=0.0.2,<0.0.3)",
+    "ipykernel (>=6.29.5,<7.0.0)",
+    "psutil (>=7.0.0,<8.0.0)",
+    "accelerate (>=1.7.0,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
