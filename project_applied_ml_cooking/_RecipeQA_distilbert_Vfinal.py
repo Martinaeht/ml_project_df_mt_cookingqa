@@ -67,14 +67,15 @@ print("Train dataset loaded successfully.")
 print("Validation dataset loaded successfully.")
 print("Test dataset loaded successfully.")
 
-# Check the first few rows of the train dataset
+# Check first few rows of train dataset
 print("Train dataset preview:")
 print(train_dataset[:2])
 print("Validation dataset preview:")
 print(val_dataset[:2])
 print("Test dataset preview:")
 print(test_dataset[:2])
-# Check the number of samples in each dataset
+
+# Check number of samples in each dataset
 print(f"Number of samples in train dataset: {len(train_dataset)}")
 print(f"Number of samples in validation dataset: {len(val_dataset)}")
 print(f"Number of samples in test dataset: {len(test_dataset)}")
@@ -118,7 +119,6 @@ def tokenize_function(examples):
     all_input_ids = []
     all_attention_masks = []
     labels = []
-        # 1. Combine context bodies into one string; 2. Construct the full question text (question_text + actual question with placeholder replaced)
     for i in range(len(examples["context"])):
         context_bodies = " ".join([step["body"] for step in examples["context"][i]])
         question_variants = [
@@ -129,7 +129,7 @@ def tokenize_function(examples):
 
         # 3. Tokenize with context as the first sentence, variant as second
         tokenized = tokenizer(
-            [context_bodies] * len(question_variants),    # Repeat context for each choice
+            [context_bodies] * len(question_variants),   
             question_variants,
             truncation="only_first",
             padding="max_length",
@@ -156,9 +156,7 @@ tokenized_dataset = recipeqa_dataset.map(
     tokenize_function,
     batched=True,
     batch_size=16,
-    remove_columns= recipeqa_dataset["train"].column_names,
-    #load_from_cache_file=False  # Optional: avoid old cached bugged versions # added
-
+    remove_columns= recipeqa_dataset["train"].column_names
 )
 print("Tokenization finished.")
 print(tokenized_dataset["train"].select(range(10)))
@@ -172,7 +170,7 @@ model = DistilBertForMultipleChoice.from_pretrained("distilbert-base-uncased")
 
 from transformers import default_data_collator
 
-#data_collator = default_data_collator # changed
+#data_collator = default_data_collator 
 data_collator = DataCollatorForMultipleChoice(tokenizer=tokenizer)
 
 accuracy_metric = evaluate.load("accuracy")
@@ -187,9 +185,7 @@ def compute_metrics(eval_pred):
     acc = accuracy_metric.compute(predictions=predictions, references=labels)
     precision_score = precision.compute(predictions=predictions, references=labels, average="weighted")
     recall_score = recall.compute(predictions=predictions, references=labels, average="weighted") 
-    #f1 = f1_score(labels, predictions, average='weighted')  # Compute F1 score (weighted average) # Weighted F1 for multi-class classification
     f1_score_result = f1_metric.compute(predictions=predictions, references=labels, average="weighted")
-    #return {"accuracy": acc, "f1": f1}
     return {
         'accuracy': acc['accuracy'],
         'precision': precision_score['precision'],
@@ -202,9 +198,7 @@ def compute_metrics(eval_pred):
 
 # objective function for Optuna
 
-
 def objective(trial):
-    # Sample hyperparameters
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 5e-5)
     batch_size = trial.suggest_categorical('batch_size', [8, 16, 32])
     num_train_epochs = trial.suggest_int('num_train_epochs', 3, 6)
@@ -231,7 +225,7 @@ def objective(trial):
         model=model,
         args=training_args,
         train_dataset=tokenized_dataset["train"],
-        eval_dataset=tokenized_dataset["val"],  # change to test when you do your final evaluation!
+        eval_dataset=tokenized_dataset["val"],  
         data_collator=data_collator,
         compute_metrics=compute_metrics,
         tokenizer=tokenizer
@@ -250,8 +244,7 @@ def objective(trial):
 #%%
 
 # Optuna with progress bar
-n_trials = 10 # adapt
-# accelerator = Accelerator() # added
+n_trials = 10 
 
 study = optuna.create_study(direction='maximize')
 study.optimize(objective, n_trials=n_trials) 
@@ -313,6 +306,7 @@ final_trainer.train()
 
 save_directory_final = "/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/distilbert_recipeqa_final_model"
 os.makedirs(save_directory, exist_ok=True)
+
 # Save the final model and tokenizer
 final_model.save_pretrained(save_directory_final)
 tokenizer.save_pretrained(save_directory_final)
@@ -346,7 +340,7 @@ for idx in range(5):  # Show first 5 examples
 
 # accuracy scores
 accuracy_val = accuracy_score(val_true_labels, val_predicted_labels)
-f1_val = f1_score(val_true_labels, val_predicted_labels, average='weighted')  # Weighted F1 for multi-class classification
+f1_val = f1_score(val_true_labels, val_predicted_labels, average='weighted')  
 
 # Print the results 
 print(f"\n Accuracy: {accuracy_val:.4f}")
@@ -358,20 +352,19 @@ final_model = DistilBertForMultipleChoice.from_pretrained(save_directory_final)
 tokenizer = DistilBertTokenizer.from_pretrained(save_directory_final)
 best_params_path = "/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/distilbert_recipeqa_optuna_large_new/best_params.json"
 
-# Ensure to load the best parameters from Optuna
+# best parameters from Optuna
 with open(best_params_path, 'r') as f:
     best_params = json.load(f)
 print("Best trial parameters loaded: ", best_params)
-# Load trained model
 
 
-# Dummy TrainingArguments (required by Trainer even if not training)
+# Dummy TrainingArguments 
 final_training_args = TrainingArguments(
-    output_dir="./results",  # temporary
+    output_dir="./results",  
     per_device_eval_batch_size=16,  
     report_to="none",
     seed=42,
-    eval_strategy="no", # added
+    eval_strategy="no",
 )
 
 # Setup trainer only for evaluation
@@ -393,7 +386,7 @@ test_true_labels = test_predictions.label_ids
 
 
 print("\nSample Predictions:")
-for idx in range(5):  # Show first 5 examples
+for idx in range(5): 
     example = recipeqa_dataset["test"][idx]
     full_question = f"{example['question_text']} " + " ".join([
         q if q != "@placeholder" else example["choice_list"][0] 
