@@ -24,18 +24,17 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import ipykernel
 import optuna
-import rich.progress
-import evaluate  # for computing accuracy
+#import rich.progress
+import evaluate  
 from pandas import json_normalize
 from datasets import load_dataset, DatasetDict
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from sklearn.metrics import f1_score
-from rich.progress import Progress
+#from rich.progress import Progress
 from accelerate import Accelerator
 
-# Import Transformers modules
 from transformers import (
     DataCollatorWithPadding,
     AutoModelForSequenceClassification,
@@ -67,7 +66,7 @@ print("Train dataset loaded successfully.")
 print("Validation dataset loaded successfully.")
 print("Test dataset loaded successfully.")
 
-# Check first few rows of train dataset
+# First few rows of train dataset
 print("Train dataset preview:")
 print(train_dataset[:2])
 print("Validation dataset preview:")
@@ -75,7 +74,7 @@ print(val_dataset[:2])
 print("Test dataset preview:")
 print(test_dataset[:2])
 
-# Check number of samples in each dataset
+# Number of samples in each dataset
 print(f"Number of samples in train dataset: {len(train_dataset)}")
 print(f"Number of samples in validation dataset: {len(val_dataset)}")
 print(f"Number of samples in test dataset: {len(test_dataset)}")
@@ -93,7 +92,7 @@ print(recipeqa_dataset)
 
 
 '''
-# Select a small subset for faster experimentation
+# Small subset for faster experimentation
 small_recipeqa_dataset = DatasetDict({
     "train": train_dataset.shuffle(seed=333).select(range(64)),
     "val": val_dataset.shuffle(seed=333).select(range(16)),
@@ -114,7 +113,6 @@ tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
 
 # Tokenize function 
 
-
 def tokenize_function(examples):
     all_input_ids = []
     all_attention_masks = []
@@ -127,7 +125,6 @@ def tokenize_function(examples):
             for choice in examples["choice_list"][i]
         ]
 
-        # 3. Tokenize with context as the first sentence, variant as second
         tokenized = tokenizer(
             [context_bodies] * len(question_variants),   
             question_variants,
@@ -136,7 +133,7 @@ def tokenize_function(examples):
             max_length=max_length,
             return_tensors=None,        
         )
-        # 4. Create attention masks
+
         all_input_ids.append(tokenized["input_ids"])
         all_attention_masks.append(tokenized["attention_mask"])
         labels.append(examples["answer"][i])
@@ -190,13 +187,13 @@ def compute_metrics(eval_pred):
         'accuracy': acc['accuracy'],
         'precision': precision_score['precision'],
         'recall': recall_score['recall'],
-        'f1': f1_score_result['f1']  # Use the f1 score from the evaluate library
+        'f1': f1_score_result['f1']  
     }
 
 
 #%%
 
-# objective function for Optuna
+# Objective function for Optuna
 
 def objective(trial):
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 5e-5)
@@ -243,7 +240,7 @@ def objective(trial):
 
 #%%
 
-# Optuna with progress bar
+# Optuna 
 n_trials = 10 
 
 study = optuna.create_study(direction='maximize')
@@ -316,14 +313,14 @@ print(f"Final model and tokenizer saved to {save_directory_final}")
 final_results = final_trainer.evaluate(tokenized_dataset["val"])
 print(f"Final Model Evaluation on Validation Set: {final_results}")
 
-#make predictions on the val set
+# Make predictions on the val set
 val_predictions = final_trainer.predict(tokenized_dataset["val"])
 val_predicted_labels = np.argmax(val_predictions.predictions, axis=1)
 val_true_labels = val_predictions.label_ids
 
 
 print("\nSample Predictions:")
-for idx in range(5):  # Show first 5 examples
+for idx in range(5):  
     example = recipeqa_dataset["val"][idx]
     full_question = f"{example['question_text']} " + " ".join([
         q if q != "@placeholder" else example["choice_list"][0] 
@@ -338,7 +335,7 @@ for idx in range(5):  # Show first 5 examples
     print(f"Actual Answer: {example['answer']}")
 
 
-# accuracy scores
+# Accuracy scores
 accuracy_val = accuracy_score(val_true_labels, val_predicted_labels)
 f1_val = f1_score(val_true_labels, val_predicted_labels, average='weighted')  
 
@@ -352,7 +349,7 @@ final_model = DistilBertForMultipleChoice.from_pretrained(save_directory_final)
 tokenizer = DistilBertTokenizer.from_pretrained(save_directory_final)
 best_params_path = "/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/distilbert_recipeqa_optuna_large_new/best_params.json"
 
-# best parameters from Optuna
+# Best parameters from Optuna
 with open(best_params_path, 'r') as f:
     best_params = json.load(f)
 print("Best trial parameters loaded: ", best_params)
@@ -367,7 +364,7 @@ final_training_args = TrainingArguments(
     eval_strategy="no",
 )
 
-# Setup trainer only for evaluation
+# Trainer for evaluation
 trainer_test_set = Trainer(
     model=final_model,
     args=final_training_args,

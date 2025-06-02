@@ -1,5 +1,4 @@
 #%%
-# Install required libraries (if not already installed)
 # %pip install transformers evaluate optuna sklearn
 
 import os
@@ -16,14 +15,13 @@ from pandas import json_normalize
 from sklearn.model_selection import train_test_split
 from datasets import Dataset, DatasetDict
 #%%
-# Define dataset folder path
+
 dataset_folder = "/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/Dataset_RecipeQA/RecipeQA_dataset"
 
-# Verify that the dataset folder exists
+# Verify that dataset folder exists and list files
 if not os.path.exists(dataset_folder):
     raise FileNotFoundError(f"Dataset folder not found: {dataset_folder}")
 
-# List files in dataset folder for confirmation
 print("Dataset folder contains:", os.listdir(dataset_folder))
 
 #%%
@@ -32,7 +30,7 @@ file_path_train = f"{dataset_folder}/train_recipeqa.json"
 file_path_val = f"{dataset_folder}/val_recipeqa.json"
 file_path_test = f"{dataset_folder}/test_recipeqa.json"
 
-# Verify all files exist before loading
+# Verify files exist 
 for file_path in [file_path_train, file_path_val, file_path_test]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Dataset file not found: {file_path}")
@@ -47,7 +45,7 @@ with open(file_path_val, "r") as file:
 with open(file_path_test, "r") as file:
     data_test = json.load(file)
 
-# Convert datasets into pandas DataFrames
+# Convert into pandas DataFrames
 df_train = pd.DataFrame(data_train)
 df_val = pd.DataFrame(data_val)
 df_test = pd.DataFrame(data_test)
@@ -102,7 +100,7 @@ dataset_text_train = dataset_text_train.dropna(subset=required_columns)
 
 # Clean 'context' column by removing 'images' and 'videos'
 for index, row in dataset_text_train.iterrows():
-    if isinstance(row["context"], list):  # Ensure context is a list before modifying
+    if isinstance(row["context"], list):  
         for context_item in row["context"]:
             context_item.pop("images", None)
             context_item.pop("videos", None)
@@ -119,21 +117,19 @@ dataset_text_train.to_json(filtered_dataset_path, orient="records", lines=True)
 print(f"Filtered dataset saved to: {filtered_dataset_path}")
 
 #%%
-# Ensure no missing values in stratification column
+# Ensure there are no missing values in stratification column
 if dataset_text_train["answer"].isnull().any():
     raise ValueError("The 'answer' column contains missing values, which will break stratification.")
 
 # Check stratification feasibility (ensuring multiple unique labels)
 if dataset_text_train["answer"].nunique() > 1:
-    # Step 1: First split into train and temp (val + test)
     train_df, temp_df = train_test_split(
         dataset_text_train,
         test_size=0.3,  # 30% goes to val + test
         random_state=42,
-        stratify=dataset_text_train["answer"]  # Preserve label balance
+        stratify=dataset_text_train["answer"]  
     )
 
-    # Step 2: Split temp into val and test
     val_df, test_df = train_test_split(
         temp_df,
         test_size=0.5,  # 50% of temp → 15% test, 15% val overall
@@ -141,7 +137,6 @@ if dataset_text_train["answer"].nunique() > 1:
         stratify=temp_df["answer"]
     )
 else:
-    # If stratification isn't feasible, split without stratify
     train_df, temp_df = train_test_split(dataset_text_train, test_size=0.3, random_state=42)
     val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
 
