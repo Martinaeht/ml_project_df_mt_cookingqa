@@ -23,7 +23,8 @@ dependencies = [
     "evaluation (>=0.0.2,<0.0.3)",
     "ipykernel (>=6.29.5,<7.0.0)",
     "psutil (>=7.0.0,<8.0.0)",
-    "accelerate (>=1.7.0,<2.0.0)"
+    "accelerate (>=1.7.0,<2.0.0)",
+    "lfs (>=0.2,<0.3)"
 ]
 
 
