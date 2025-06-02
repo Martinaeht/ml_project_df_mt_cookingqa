@@ -14,3 +14,4 @@ distilbert_recipeqa_optuna_large_new
 roberta_model_optuna 
 distilbert_recipeqa_optuna_large_new/model.safetensors
 distilbert_recipeqa_final_model/model.safetensors
+roberta_recipeqa_final_best_model/model.safetensors
