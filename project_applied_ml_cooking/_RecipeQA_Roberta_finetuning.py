@@ -1,6 +1,5 @@
-#Dimi Test 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  #adapt
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  
 
 import torch
 if torch.cuda.is_available():
@@ -17,15 +16,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import ipykernel
 import optuna
-import evaluate  # for computing accuracy
+import evaluate  
 from pandas import json_normalize
 from datasets import load_dataset, DatasetDict
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from sklearn.metrics import f1_score
-
-# Import Transformers modules
 from transformers import (
     DataCollatorWithPadding,
     AutoModelForMultipleChoice,
@@ -40,13 +37,10 @@ from transformers import (
     DataCollatorForMultipleChoice,
 )
 
-# %%
-
 print(f"Using device: {torch.cuda.current_device()} - {torch.cuda.get_device_name(torch.cuda.current_device())}")
 
 set_seed(42)
 
-# %%
 train_dataset_path = '/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/Dataset_RecipeQA/RecipeQA_dataset/train_qafilt_true.json'
 val_dataset_path = '/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/Dataset_RecipeQA/RecipeQA_dataset/val_qafilt_true.json'
 test_dataset_path = '/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/Dataset_RecipeQA/RecipeQA_dataset/test_qafilt_true.json'
@@ -70,7 +64,6 @@ def preprocess_function(examples):
     all_input_ids = []
     all_attention_masks = []
     labels = []
-        # 1. Combine context bodies into one string; 2. Construct the full question text (question_text + actual question with placeholder replaced)
     for i in range(len(examples["context"])):
         context_bodies = " ".join([step["body"] for step in examples["context"][i]])
         question_variants = [
@@ -79,16 +72,15 @@ def preprocess_function(examples):
             for choice in examples["choice_list"][i]
         ]
 
-        # 3. Tokenize with context as the first sentence, variant as second
         tokenized = tokenizer(
-            [context_bodies] * len(question_variants),    # Repeat context for each choice
+            [context_bodies] * len(question_variants),   
             question_variants,
             truncation="only_first",
             padding="max_length",
             max_length=max_length,
             return_tensors=None,        
         )
-        # 4. Create attention masks
+        
         all_input_ids.append(tokenized["input_ids"])
         all_attention_masks.append(tokenized["attention_mask"])
         labels.append(examples["answer"][i])
@@ -127,21 +119,18 @@ def compute_metrics(eval_pred):
 
 #Training with Optuna
 def objective(trial):
-    # Define the hyperparameters to be optimized
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 5e-5)
     batch_size = trial.suggest_categorical('batch_size', [8, 16, 32])
     num_train_epochs = trial.suggest_int('num_train_epochs', 3, 10)
-    weight_decay = trial.suggest_loguniform('weight_decay', 1e-6, 1e-2)  # Weight decay to regularize the model
-    dropout_rate = trial.suggest_uniform('dropout_rate', 0.1, 0.5)  # Dropout rate for regularization
-    adam_epsilon = trial.suggest_loguniform('adam_epsilon', 1e-8, 1e-6)  # Epsilon for Adam optimizer
+    weight_decay = trial.suggest_loguniform('weight_decay', 1e-6, 1e-2)  
+    dropout_rate = trial.suggest_uniform('dropout_rate', 0.1, 0.5)  
+    adam_epsilon = trial.suggest_loguniform('adam_epsilon', 1e-8, 1e-6) 
     
     roberta_model = AutoModelForMultipleChoice.from_pretrained("roberta-base")
 
-    # Define the model configuration
     roberta_model.config.attention_probs_dropout_prob = dropout_rate
     roberta_model.config.hidden_dropout_prob = dropout_rate
 
-    # Set up training arguments
     arguments = TrainingArguments(
       output_dir="/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/roberta_model_optuna",
       per_device_train_batch_size=batch_size,
@@ -162,7 +151,7 @@ def objective(trial):
       model=roberta_model,
       args=arguments,
       train_dataset=tokenized_dataset['train'],
-      eval_dataset=tokenized_dataset['val'], # change to test when you do your final evaluation!
+      eval_dataset=tokenized_dataset['val'], 
       tokenizer=tokenizer,
       data_collator=data_collator,
       compute_metrics=compute_metrics,
@@ -174,14 +163,13 @@ def objective(trial):
     evaluation_accuracy = results['eval_accuracy']
     return evaluation_accuracy
 
-study = optuna.create_study(direction="maximize")  # We want to maximize validation accuracy
+study = optuna.create_study(direction="maximize") 
 study.optimize(objective, n_trials=10)
 
 best_params = study.best_trial.params
 print(f"Best hyperparameters: {study.best_params}")
 print(f"Best validation accuracy: {study.best_value}")
 
-# Save best parameters to a file
 save_directory = "/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/roberta_model_optuna_best_params"
 os.makedirs(save_directory, exist_ok=True)
 
@@ -193,13 +181,10 @@ print(f"Best trial parameters saved to {best_params_path}")
 tokenizer.save_pretrained(save_directory)
 
 roberta_model = AutoModelForMultipleChoice.from_pretrained("roberta-base")
-# Save the best model
+
 roberta_model.save_pretrained("/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/roberta_model_optuna_best_model")
 print("Best model saved successfully.")
 
-# %%
-
-# final training with best parameters
 with open(best_params_path, 'r') as f:
     best_params = json.load(f)
 print("Best trial parameters loaded: ", best_params)
@@ -239,23 +224,20 @@ final_trainer.train()
 
 save_directory_final = "/home/mlt_ml3/project_cookingqa/Project_Applied_ML_Cooking/roberta_recipeqa_final_best_model"
 os.makedirs(save_directory_final, exist_ok=True)
-# Save the final model and tokenizer
+
 final_roberta_model.save_pretrained(save_directory_final)
 tokenizer.save_pretrained(save_directory_final)
 print(f"Final model and tokenizer saved to {save_directory_final}")
 
-# Evaluate the final model on the validation set
 final_results = final_trainer.evaluate(tokenized_dataset["val"])
 print(f"Final Model Evaluation on Validation Set: {final_results}")
 
-#Make predictions for deeper analysis
 val_predictions = final_trainer.predict(tokenized_dataset["val"])
 val_predicted_labels = np.argmax(val_predictions.predictions, axis=1)
 val_true_labels = val_predictions.label_ids
 
-# 3. Show some example predictions
 print("\nSample Predictions:")
-for idx in range(5):  # Show first 5 examples
+for idx in range(5):  
     example = recipeqa_dataset["val"][idx]
     full_question = f"{example['question_text']} " + " ".join([
         q if q != "@placeholder" else example["choice_list"][0] 
@@ -269,15 +251,11 @@ for idx in range(5):  # Show first 5 examples
     print(f"Predicted Answer: {example['choice_list'][val_predicted_labels[idx]]}")
     print(f"Actual Answer: {example['answer']}")
 
-# accuracy scores
 accuracy_val= accuracy_score(val_true_labels, val_predicted_labels)
-f1_val = f1_score(val_true_labels, val_predicted_labels, average='weighted')  # Weighted F1 for multi-class classification
+f1_val = f1_score(val_true_labels, val_predicted_labels, average='weighted') 
 
-# Print the results 
 print(f"\n Accuracy: {accuracy_val:.4f}")
 print(f"F1 Score: {f1_val:.4f}")
-
-############
 
 test_results = final_trainer.evaluate(tokenized_dataset['test'])
 print(f"Final evaluation results on test set: {test_results}")
@@ -297,7 +275,7 @@ for idx in range(10):
     print(f"Predicted Answer: {example['choice_list'][test_predicted_labels[idx]]}")
     print(f"Actual Answer: {example['answer']}")
 
-'''Hyperparameter Visualization wollte ich machen, aber es war am server nicht möglich nach dem Trainieren'''
+#Hyperparameter Visualization wollte ich machen, aber es war am server nicht möglich nach dem Trainieren
 
 #trial_numbers = list(range(1, len(study.trials) + 1))
 #accuracy_values = [trial.value for trial in study.trials]

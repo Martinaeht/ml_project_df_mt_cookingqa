@@ -29,7 +29,6 @@ recipeqa_dataset = DatasetDict({
     "test": test_dataset.shuffle(seed=42),
 })
 
-# Preprocess function
 def prepare_examples(dataset):
     texts, labels = [], []
     for example in dataset:
@@ -50,21 +49,19 @@ X_val_texts, y_val = prepare_examples(val_dataset)
 print("Preparing test data...")
 X_test_texts, y_test = prepare_examples(test_dataset)
 
-# Vectorization
 print("Vectorizing text...")
 vectorizer = TfidfVectorizer(max_features=max_features)
 X_train = vectorizer.fit_transform(X_train_texts)
 X_val = vectorizer.transform(X_val_texts)
 X_test = vectorizer.transform(X_test_texts)
 
-# Train Naive Bayes classifier
 print("Training Naive Bayes classifier...")
 clf = MultinomialNB()
 clf.fit(X_train, y_train)
 
 def evaluate_grouped(model, X_texts, y_true, dataset_name="Dataset", group_size=num_choices):
     X = vectorizer.transform(X_texts)
-    probs = model.predict_proba(X)[:, 1]  # Use probability for class 1
+    probs = model.predict_proba(X)[:, 1]  
     preds, y_grouped = [], []
 
     for i in range(0, len(probs), group_size):
@@ -85,7 +82,6 @@ def evaluate_grouped(model, X_texts, y_true, dataset_name="Dataset", group_size=
     print(f"Recall   : {recall:.4f}")
     print(f"F1-score : {f1:.4f}")
 
-# === Evaluate ===
 evaluate_grouped(clf, X_val_texts, y_val, dataset_name="Validation Set")
 evaluate_grouped(clf, X_test_texts, y_test, dataset_name="Test Set")
 
@@ -102,7 +98,6 @@ def show_predictions(model, X_texts, y_true, dataset, dataset_name="Dataset", gr
         pred_idx = np.argmax(group_probs)
         true_idx = np.argmax(y_true[start:end])
 
-        # Reconstruct full question using the first choice (like your example)
         full_question = f"{example['question_text']} " + " ".join([
             q if q != "@placeholder" else example["choice_list"][0]
             for q in example["question"]
@@ -149,8 +144,6 @@ def show_predictions(model, X_texts, y_true, dataset, dataset_name="Dataset", gr
             
 """
 
-
-# Show example predictions
 show_predictions(clf, X_val_texts, y_val, recipeqa_dataset["val"], dataset_name="Validation Set")
 show_predictions(clf, X_test_texts, y_test, recipeqa_dataset["test"], dataset_name="Test Set")
 

@@ -28,7 +28,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import ipykernel
-import evaluate  # for computing accuracy
+import evaluate
 import torch
 import os
 import random
@@ -36,7 +36,6 @@ import random
 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #print(f"Using device: {device}")
 
-# Import Transformers modules
 from transformers import (
     DataCollatorWithPadding,
     AutoModelForMultipleChoice,
@@ -66,7 +65,6 @@ train_data = [json.loads(line) for line in open('/content/train_qafilt_true.json
 val_data = [json.loads(line) for line in open('/content/val_qafilt_true.json')]
 test_data = [json.loads(line) for line in open('/content/test_qafilt_true.json')]
 
-# Convert list of dicts to Hugging Face Datasets
 train_dataset = Dataset.from_list(train_data)
 val_dataset = Dataset.from_list(val_data)
 test_dataset = Dataset.from_list(test_data)
@@ -87,7 +85,6 @@ def preprocess_function(examples):
     all_input_ids = []
     all_attention_masks = []
     labels = []
-        #Combine context bodies into one string and construct the full question text (question_text + actual question with placeholder replaced)
     for i in range(len(examples["context"])):
         context_bodies = " ".join([step["body"] for step in examples["context"][i]])
         question_variants = [
@@ -104,7 +101,7 @@ def preprocess_function(examples):
             max_length=max_length,
             return_tensors=None,
         )
-        #Create attention masks
+        
         all_input_ids.append(tokenized["input_ids"])
         all_attention_masks.append(tokenized["attention_mask"])
         labels.append(examples["answer"][i])
@@ -188,17 +185,15 @@ final_roberta_model.save_pretrained(final_model_path)
 tokenizer.save_pretrained(final_model_path)
 print(f"Final model and tokenizer saved to {final_model_path}")
 
-# Evaluate the final model on the validation set
 final_results = final_trainer.evaluate(tokenized_dataset["val"])
 print(f"Final Model Evaluation on Validation Set: {final_results}")
 
-#Make predictions
 val_predictions = final_trainer.predict(tokenized_dataset["val"])
 val_predicted_labels = np.argmax(val_predictions.predictions, axis=1)
 val_true_labels = val_predictions.label_ids
 
 print("\nSample Predictions:")
-for idx in range(5):  # Show first 5 examples
+for idx in range(5):  
     example = recipeqa_dataset["val"][idx]
     full_question = f"{example['question_text']} " + " ".join([
         q if q != "@placeholder" else example["choice_list"][0]
@@ -213,7 +208,7 @@ for idx in range(5):  # Show first 5 examples
     print(f"Actual Answer: {example['answer']}")
 
 accuracy = accuracy_score(val_true_labels, val_predicted_labels)
-f1 = f1_score(val_true_labels, val_predicted_labels, average='weighted')  # Weighted F1 for multi-class classification
+f1 = f1_score(val_true_labels, val_predicted_labels, average='weighted')  
 
 print(f"\n Accuracy: {accuracy:.4f}")
 print(f"F1 Score: {f1:.4f}")
@@ -226,7 +221,7 @@ test_predicted_labels = np.argmax(test_predictions.predictions, axis=1)
 test_true_labels = test_predictions.label_ids
 
 print("\nSample Predictions on Test Set:")
-for idx in range(5):  # Show first 5 examples
+for idx in range(5):  
     example = recipeqa_dataset["test"][idx]
     full_question = f"{example['question_text']} " + " ".join([
         q if q != "@placeholder" else example["choice_list"][0]
