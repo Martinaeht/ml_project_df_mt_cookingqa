@@ -111,39 +111,6 @@ def show_predictions(model, X_texts, y_true, dataset, dataset_name="Dataset", gr
         print(f"Predicted Answer: {example['choice_list'][pred_idx]}")
         print(f"Actual Answer: {example['choice_list'][true_idx]}")
 
-
-"""
-def show_predictions(model, X_texts, y_true, dataset, dataset_name="Dataset", group_size=num_choices, num_examples=5):
-    X = vectorizer.transform(X_texts)
-    probs = model.predict_proba(X)[:, 1]
-    print(f"\nSample Predictions from {dataset_name}:")
-
-    count = 0
-    for i in range(0, len(probs), group_size):
-        group_probs = probs[i:i+group_size]
-        pred_idx = np.argmax(group_probs)
-        true_idx = np.argmax(y_true[i:i+group_size])
-        example = dataset[i // group_size]
-
-        print(f"\nQuestion: {count + 1}: {example['question_text']} "+ " ".join([
-            q if q != "@placeholder" else example['choice_list'][0] 
-        for q in example['question']
-        ])) #changed
-        #print(f"Context: {' '.join([step['body'] for step in example['context']])}")
-        for j, choice in enumerate(example["choice_list"]):
-            label = ""
-            if j == true_idx:
-                label += "(Correct) "
-            if j == pred_idx:
-                label += "(Predicted) "
-            print(f"  Choice {j}: {choice} {label}")
-
-        count += 1
-        if count >= num_examples:
-            break
-            
-"""
-
 show_predictions(clf, X_val_texts, y_val, recipeqa_dataset["val"], dataset_name="Validation Set")
 show_predictions(clf, X_test_texts, y_test, recipeqa_dataset["test"], dataset_name="Test Set")
 
